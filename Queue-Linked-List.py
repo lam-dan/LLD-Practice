@@ -1,3 +1,5 @@
+from typing import Optional
+
 class Node:
     def __init__(self, val):
         self.next = None
@@ -14,7 +16,7 @@ class Queue:
         self.tail = node
         self.length += 1
     
-    def dequeue(self):
+    def dequeue(self) -> Optional[int]:
         if self.head.next is None:
             return None
         
@@ -28,15 +30,14 @@ class Queue:
         tmp.next = None
         return tmp.val
     
-    def peek_front(self):
+    def peek_front(self) -> Optional[int]:
         return self.head.next.val if self.head.next else None
     
-    def peek_back(self):
+    def peek_back(self) -> Optional[int]:
         return self.tail.val if self.tail != self.head else None
     
-
-    def size(self):
-        return self.length
+    def size(self) -> int:
+        return self.length 
 
 queue = Queue()
 queue.enqueue(4)
