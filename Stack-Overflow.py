@@ -26,142 +26,140 @@
 # Both Answers and Questions can comment, tag, or vote.
 # Commentable
 # Votable
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List, Optional
 
 class Commentable(ABC):
     @abstractmethod
-    def add_comment(self, comment):
+    def add_comment(self, comment: Comment) -> None:
         pass
 
-    def get_comments(self):
+    def get_comments(self) -> List[Comment]:
         pass
 
 class Votable(ABC):
     @abstractmethod
-    def add_vote(self, vote):
-        pass
-    def get_votes(self):
+    def add_vote(self, user: User, value: int) -> None:
         pass
 
-class Tag():
-    def __init__(self, name):
-        self.name = name
+    def get_votes(self) -> int:
+        pass
+
+class User:
+    def __init__(self, user_id: int, user_name: str, email: str):
+        self.user_id: int = user_id
+        self.user_name: str = user_name
+        self.email: str = email
+        self.reputation: int = 0
+        self.questions: List[Question] = []
+        self.comments: List[Comment] = []
+        self.answers: List[Answer] = []
+
+    def post_question(self, title: str, content: str, tags: List[str]) -> Question:
+        question = Question(title, self, content, tags)
+        self.questions.append(question)
+        self.update_reputation(5)
+        return question
+
+    def post_answer(self, question: Question, content: str) -> Answer:
+        answer = Answer(self, content, question)
+        self.answers.append(answer)
+        question.add_answer(answer)
+        self.update_reputation(10)
+        return answer
+
+    def post_comment(self, commentable: Commentable, content: str) -> Comment:
+        comment = Comment(content, self)
+        self.comments.append(comment)
+        commentable.add_comment(comment)
+        self.update_reputation(2)
+        return comment
+
+    def update_reputation(self, value: int) -> None:
+        self.reputation += value
+        if self.reputation < 0:
+            self.reputation = 0
+
+class Comment:
+    def __init__(self, content: str, user: User):
+        self.id: int = id(self)
+        self.user: User = user
+        self.content: str = content
+        self.tags: List[Tag] = []
 
 class Question(Commentable, Votable):
-    def __init__(self, title, user, content, tag_names):
-        self.id = id(self)
-        self.title = title
-        self.user = user
-        self.content = content
-        self.creation_date = datetime.now()
-        self.tags = [Tag(tag_name) for tag_name in tag_names]
-        self.answers = []
-        self.votes = []  # list of Votes
-        self.comments = []
+    def __init__(self, title: str, user: User, content: str, tag_names: List[str]):
+        self.id: int = id(self)
+        self.title: str = title
+        self.user: User = user
+        self.content: str = content
+        self.creation_date: datetime = datetime.now()
+        self.tags: List[Tag] = [Tag(tag_name) for tag_name in tag_names]
+        self.answers: List[Answer] = []
+        self.votes: List[Vote] = []
+        self.comments: List[Comment] = []
 
-    def add_answer(self, answer):
+    def add_answer(self, answer: Answer) -> None:
         if answer not in self.answers:
             self.answers.append(answer)
 
-    def add_vote(self, user, value):
+    def add_vote(self, user: User, value: int) -> None:
         if value not in [-1, 1]:
             raise ValueError("Vote value must be either 1 or -1")
         self.votes = [v for v in self.votes if v.user != user]
         self.votes.append(Vote(user, value))
-        self.user.update_reputation(value * 5) # +5 for upvote, and -5 for downvote
+        self.user.update_reputation(value * 5)
 
-    def get_votes(self):
+    def get_votes(self) -> int:
         return sum(v.value for v in self.votes)
 
-    def add_comment(self, comment):
+    def add_comment(self, comment: Comment) -> None:
         self.comments.append(comment)
-    
-    def get_comments(self):
-        return self.comments.copy()
-    
 
-class Vote():
-    def __init__(self, user, value):
-        self.value = value
-        self.user = user
+    def get_comments(self) -> List[Comment]:
+        return self.comments.copy()
+
+class Tag:
+    def __init__(self, name: str):
+        self.name: str = name
+
+class Vote:
+    def __init__(self, user: User, value: int):
+        self.value: int = value
+        self.user: User = user
 
 class Answer(Commentable, Votable):
-    def __init__(self, user, content, question):
-        self.id = id(self)
-        self.user = user
-        self.content = content
-        self.question = question #Double check this later
-        self.comments = []
-        self.votes = []
-        self.is_accepted = False
+    def __init__(self, user: User, content: str, question: Question):
+        self.id: int = id(self)
+        self.user: User = user
+        self.content: str = content
+        self.question: Question = question
+        self.comments: List[Comment] = []
+        self.votes: List[Vote] = []
+        self.is_accepted: bool = False
 
-    def add_vote(self, user, value):
+    def add_vote(self, user: User, value: int) -> None:
         if value not in [-1, 1]:
             raise ValueError("Vote value must be either 1 or -1")
         self.votes = [v for v in self.votes if v.user != user]
         self.votes.append(Vote(user, value))
         self.user.update_reputation(value * 10)
 
-    def add_comment(self, comment):
+    def add_comment(self, comment: Comment) -> None:
         self.comments.append(comment)
-    
-    def mark_as_accepted(self):
+
+    def mark_as_accepted(self) -> None:
         if self.is_accepted:
             raise ValueError("Answer is already accepted.")
         self.is_accepted = True
 
-    def get_votes(self):
+    def get_votes(self) -> int:
         return sum(v.value for v in self.votes)
 
-    def get_comments(self):
+    def get_comments(self) -> List[Comment]:
         return self.comments.copy()
-    
-class Comment():
-    def __init__(self, content, user):
-        self.id = id(self)
-        self.user = user
-        self.content = content
-        self.tags = [] # list of Tags
-        self.creation_date = datetime.now()
-
-class User():
-    def __init__(self, user_id, user_name, email):
-        self.user_id = user_id
-        self.user_name = user_name
-        self.email = email
-        self.reputation = 0
-        self.questions = [] # list of Questions
-        self.comments = [] # list of Comments
-        self.answers = [] # list of Answers
-
-    def post_question(self, title, content, tags):
-        question = Question(title, self, content, tags)
-        self.questions.append(question)
-        self.update_reputation(5)
-        return question
-    
-    def post_answer(self, question, content):
-        answer = Answer(self, content, question)
-        self.answers.append(answer)
-        question.add_answer(answer)
-        self.update_reputation(10)
-        return answer
-       
-
-    def post_comments(self, commentable, content):
-        comment = Comment(content, self)
-        self.comments.append(comment)
-        commentable.add_comment(comment)
-        self.update_reputation(2) # Gain reputation for commenting
-        return comment
-    
-    def update_reputation(self, value):
-        self.reputation += value
-        if self.reputation < 0:
-            self.reputation = 0
-
 
 class StackOverflow:
     def __init__(self):
@@ -170,41 +168,40 @@ class StackOverflow:
         self.answers: Dict[int, Answer] = {}
         self.tags: Dict[str, Tag] = {}
 
-    def create_user(self, username, email):
+    def create_user(self, username: str, email: str) -> User:
         user_id = len(self.users) + 1
         user = User(user_id, username, email)
         self.users[user_id] = user
         return user
-    
-    def post_question(self, user, title, content, tags):
+
+    def post_question(self, user: User, title: str, content: str, tags: List[str]) -> Question:
         question = user.post_question(title, content, tags)
         self.questions[question.id] = question
         for tag in question.tags:
             if tag.name not in self.tags:
                 self.tags[tag.name] = tag
         return question
-    
-    # Posting answers to a question
-    def post_answer(self, user, question, content):
+
+    def post_answer(self, user: User, question: Question, content: str) -> Answer:
         answer = user.post_answer(question, content)
         self.answers[answer.id] = answer
         return answer
-    
-    def add_comment(self, user, commentable, content):
-        return user.post_comments(commentable, content)
-    
-    def vote_question(self, user, question, value):
+
+    def add_comment(self, user: User, commentable: Commentable, content: str) -> Comment:
+        return user.post_comment(commentable, content)
+
+    def vote_question(self, user: User, question: Question, value: int) -> None:
         question.add_vote(user, value)
 
-    def vote_answer(self, user, answer, value):
+    def vote_answer(self, user: User, answer: Answer, value: int) -> None:
         answer.add_vote(user, value)
 
-    def accept_answer(self, answer):
+    def accept_answer(self, answer: Answer) -> None:
         answer.mark_as_accepted()
 
-    def search_questions(self, query):
+    def search_questions(self, query: str) -> List[Question]:
         query = query.lower()
-        results = []
+        results: List[Question] = []
 
         for question in self.questions.values():
             is_title_match = query in question.title.lower()
@@ -213,22 +210,22 @@ class StackOverflow:
 
             if is_title_match or is_content_match or is_tag_match:
                 results.append(question)
-        
+
         return results
-    
-    def get_questions_by_users(self, user):
+
+    def get_questions_by_users(self, user: User) -> List[Question]:
         return user.questions
-    
-    def get_user(self, user_id):
+
+    def get_user(self, user_id: int) -> Optional[User]:
         return self.users.get(user_id)
-    
-    def get_question(self, question_id):
+
+    def get_question(self, question_id: int) -> Optional[Question]:
         return self.questions.get(question_id)
-    
-    def get_answer(self, answer_id):
+
+    def get_answer(self, answer_id: int) -> Optional[Answer]:
         return self.answers.get(answer_id)
-    
-    def get_tag(self, name:str):
+
+    def get_tag(self, name: str) -> Optional[Tag]:
         return self.tags.get(name)
 
 
