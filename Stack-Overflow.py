@@ -8,7 +8,7 @@
 # The system should assign reputation score to users based on their activity and the quality of their contributions.
 
 # Core Entities
-# User
+# User 
 # Question
 # Answer
 # Comment
@@ -87,7 +87,6 @@ class Comment:
         self.id: int = id(self)
         self.user: User = user
         self.content: str = content
-        self.tags: List[Tag] = []
 
 class Question(Commentable, Votable):
     def __init__(self, title: str, user: User, content: str, tag_names: List[str]):

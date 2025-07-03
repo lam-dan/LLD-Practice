@@ -7,7 +7,6 @@ class Node:
         self.next = None
         self.prev = None
 
-
 class Queue:
     def __init__(self, capacity: int):
         self.cache = {}
